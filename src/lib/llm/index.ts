@@ -16,8 +16,8 @@ export class LLMFactory {
       LLMFactory.instance = new LLMFactory();
     }
     return LLMFactory.instance;
-  }
-  public initializeProvider(provider: 'openai' | 'anthropic' | 'gemini', apiKey: string): void {
+  }  public initializeProvider(provider: 'openai' | 'anthropic' | 'gemini', apiKey: string): void {
+    console.log(`Initializing provider: ${provider}, API key present: ${!!apiKey}`);
     switch (provider) {
       case 'openai':
         this.providers.set(provider, new OpenAIProvider(apiKey));
@@ -31,8 +31,10 @@ export class LLMFactory {
       default:
         throw new Error(`Unsupported provider: ${provider}`);
     }
-  }
-  public getProvider(model: ModelType): LLMProvider {
+    console.log(`Provider ${provider} initialized successfully. Total providers: ${this.providers.size}`);
+  }  public getProvider(model: ModelType): LLMProvider {
+    console.log(`Getting provider for model: ${model}`);
+    
     // Determine provider based on model
     let provider: 'openai' | 'anthropic' | 'gemini';
     
@@ -46,11 +48,15 @@ export class LLMFactory {
       throw new Error(`Unsupported model: ${model}`);
     }
     
+    console.log(`Determined provider: ${provider}`);
+    console.log(`Available providers:`, Array.from(this.providers.keys()));
+    
     const llmProvider = this.providers.get(provider);
     if (!llmProvider) {
       throw new Error(`Provider ${provider} not initialized. Please call initializeProvider first.`);
     }
     
+    console.log(`Provider ${provider} found and returned`);
     return llmProvider;
   }
 }

@@ -1,1 +1,19 @@
 node_modules
+.next
+.env.local
+.env.production
+.env
+*.log
+.vercel
+.DS_Store
+dist/
+build/
+*.tgz
+*.tar.gz
+
+# Development plan and internal docs
+DEVELOPMENT_PLAN.txt
+*.todo
+*.notes
+
+/generated/prisma

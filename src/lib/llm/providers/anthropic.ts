@@ -16,13 +16,12 @@ export class AnthropicProvider implements LLMProvider {
       content,
     }));
   }
-
   async generateResponse(messages: Message[], params?: ModelParams): Promise<string> {
     try {
       const response = await axios.post<any>(
         this.baseUrl,
         {
-          model: 'claude-2',
+          model: 'claude-3-sonnet-20240229',
           messages: this.formatMessages(messages),
           max_tokens: params?.maxTokens ?? 2000,
           temperature: params?.temperature ?? 0.7,
@@ -45,16 +44,16 @@ export class AnthropicProvider implements LLMProvider {
       throw error;
     }
   }
-
-  async *streamResponse(messages: Message[], params?: ModelParams): AsyncGenerator<string> {
+  async *generateStreamingResponse(messages: Message[], params?: ModelParams): AsyncGenerator<string> {
     try {
       const response = await axios.post(
         this.baseUrl,
         {
-          model: 'claude-2',
+          model: 'claude-3-sonnet-20240229',
           messages: this.formatMessages(messages),
           max_tokens: params?.maxTokens ?? 2000,
           temperature: params?.temperature ?? 0.7,
+          top_p: params?.topP ?? 1,
           stream: true,
         },
         {

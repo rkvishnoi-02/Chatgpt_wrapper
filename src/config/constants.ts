@@ -25,21 +25,16 @@ export const SUPPORTED_MODELS: Record<ModelType, { name: string; maxTokens: numb
   'claude-2': {
     name: 'Claude 2',
     maxTokens: 100000,
-  },
-  'claude-instant': {
+  },  'claude-instant': {
     name: 'Claude Instant',
     maxTokens: 100000,
   },
   'gemini-2.0-flash': {
-    name: 'Gemini Pro',
+    name: 'Gemini 2.0 Flash',
     maxTokens: 32768,
   },
   'gemini-2.0-flash-vision': {
     name: 'Gemini Pro Vision',
-    maxTokens: 32768,
-  },
-  'gemini-2.0-flash': {
-    name: 'Gemini 2.0 Flash',
     maxTokens: 32768,
   },
 };

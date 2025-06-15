@@ -32,16 +32,15 @@ export const Dropdown = React.forwardRef<HTMLSelectElement, DropdownProps>(
     ref
   ) => {
     return (
-      <div className="relative">
-        <select
+      <div className="relative">        <select
           ref={ref}
           value={value}
           onChange={(e) => onChange(e.target.value)}
           disabled={disabled}
           className={twMerge(
-            'block w-full rounded-md border border-secondary-300 bg-white py-2 pl-3 pr-10 text-base',
-            'focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500',
-            'disabled:cursor-not-allowed disabled:bg-secondary-100 disabled:opacity-50',
+            'block w-full rounded-md border border-sidebar-border bg-sidebar py-2 pl-3 pr-10 text-sm text-sidebar-foreground',
+            'focus:border-sidebar-accent-foreground focus:outline-none focus:ring-1 focus:ring-sidebar-accent-foreground',
+            'disabled:cursor-not-allowed disabled:bg-sidebar-accent disabled:opacity-50',
             error && 'border-red-500 focus:border-red-500 focus:ring-red-500',
             className
           )}
@@ -57,10 +56,9 @@ export const Dropdown = React.forwardRef<HTMLSelectElement, DropdownProps>(
               {option.label}
             </option>
           ))}
-        </select>
-        <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2">
+        </select>        <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2">
           <svg
-            className="h-4 w-4 text-secondary-400"
+            className="h-4 w-4 text-sidebar-foreground/70"
             xmlns="http://www.w3.org/2000/svg"
             viewBox="0 0 20 20"
             fill="currentColor"

@@ -139,21 +139,27 @@ export class GeminiProvider implements LLMProvider {
       console.error('Error in Gemini generateResponse:', error);
       throw error;
     }
-  }
-
-  async *streamResponse(messages: Message[], params?: ModelParams): AsyncGenerator<string> {
+  }  async *generateStreamingResponse(messages: Message[], params?: ModelParams): AsyncGenerator<string> {
     try {
-      console.log('Streaming response with Gemini...');
+      console.log('Starting real streaming with Gemini...');
+      const model = (params as any)?.model || 'gemini-2.0-flash';
+      const formattedContent = this.formatMessagesForAPI(messages);
+      
+      // For now, let's use simulated streaming with smaller chunks for better effect
+      console.log('Using simulated streaming for more reliable experience...');
       const response = await this.generateResponse(messages, params);
       
-      // Simulate streaming since the direct API doesn't support it
-      const chunks = response.split(' ');
-      for (const chunk of chunks) {
-        yield chunk + ' ';
-        await new Promise(resolve => setTimeout(resolve, 50));
+      // Split by words and yield each word with a small delay
+      const words = response.split(' ');
+      for (let i = 0; i < words.length; i++) {
+        const chunk = i === 0 ? words[i] : ' ' + words[i];
+        console.log('Yielding chunk:', chunk);
+        yield chunk;
+        // Small delay to create streaming effect
+        await new Promise(resolve => setTimeout(resolve, 100));
       }
     } catch (error) {
-      console.error('Error in Gemini streamResponse:', error);
+      console.error('Error in Gemini generateStreamingResponse:', error);
       throw error;
     }
   }

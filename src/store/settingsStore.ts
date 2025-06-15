@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
+import { persist, createJSONStorage } from 'zustand/middleware';
 import { AppSettings, ProviderConfig } from '../types/config';
 
 interface SettingsState {
@@ -42,10 +42,19 @@ export const useSettingsStore = create<SettingsState>()(
       updateProviderConfig: (newConfig) =>
         set((state) => ({
           providerConfig: { ...state.providerConfig, ...newConfig },
-        })),
-    }),
+        })),    }),
     {
       name: 'llm-wrapper-settings',
+      storage: createJSONStorage(() => {
+        if (typeof window === 'undefined') {
+          return {
+            getItem: () => null,
+            setItem: () => {},
+            removeItem: () => {},
+          };
+        }
+        return localStorage;
+      }),
     }
   )
 );

@@ -1,0 +1,333 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// Authentication & User Management
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String    @unique
+  emailVerified DateTime?
+  image         String?
+  hashedPassword String?   // For credentials-based auth
+  role          String    @default("user") // user, admin
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Subscription & Usage
+  subscriptionId     String?
+  subscriptionStatus SubscriptionStatus @default(FREE)
+  subscriptionTier   String            @default("free") // free, pro, enterprise
+  tokensUsed         Int                @default(0)
+  tokensLimit        Int                @default(10000)
+  usageCount         Int                @default(0)
+  usageLimit         Int                @default(100)
+  resetDate          DateTime           @default(now())
+
+  // Preferences
+  theme              String  @default("system")
+  fontSize           String  @default("md")
+  defaultModel       String  @default("gpt-3.5-turbo")
+  enableMarkdown     Boolean @default(true)
+  enableCodeHighlight Boolean @default(true)
+
+  // Relations
+  accounts      Account[]
+  sessions      Session[]
+  chatSessions  ChatSession[]
+  agents        Agent[]
+  workflows     Workflow[]
+  usageRecords  UsageRecord[]
+  apiKeys       ApiKey[]
+
+  @@map("users")
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+// Chat System
+model ChatSession {
+  id        String   @id @default(cuid())
+  title     String
+  model     String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  userId    String
+  
+  // Agent Integration
+  workflowId String?
+  isAgentChat Boolean @default(false)
+  
+  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  messages Message[]
+  workflow Workflow? @relation(fields: [workflowId], references: [id])
+
+  @@map("chat_sessions")
+}
+
+model Message {
+  id        String   @id @default(cuid())
+  role      String   // user, assistant, system, agent
+  content   String
+  timestamp DateTime @default(now())
+  
+  // Message metadata
+  model     String?
+  tokens    Int?
+  cost      Float?
+  
+  // Agent metadata
+  agentId   String?
+  agentType String?
+  
+  chatSessionId String
+  chatSession   ChatSession @relation(fields: [chatSessionId], references: [id], onDelete: Cascade)
+  agent         Agent?      @relation(fields: [agentId], references: [id])
+
+  @@map("messages")
+}
+
+// AI Agents System
+model Agent {
+  id          String    @id @default(cuid())
+  name        String    @unique
+  description String?
+  instructions String   // System instructions/prompt for the agent
+  type        AgentType @default(SPECIALIST)
+  category    String
+  version     String    @default("1.0.0")
+  
+  // Agent Configuration
+  model       String
+  provider    String    // openai, anthropic, google, etc.
+  systemPrompt String?  // Alternative to instructions
+  tools       Json?     // JSON array of tools/capabilities
+  capabilities Json?    // Agent capabilities
+  config      Json?     // Agent-specific configuration
+  metadata    Json?     // Additional metadata
+  
+  // Marketplace
+  isPublic    Boolean   @default(false)
+  price       Float?
+  downloads   Int       @default(0)
+  rating      Float?
+  
+  // Ownership & Status
+  userId      String?   // Make optional for system agents
+  isActive    Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  
+  user              User?             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  messages          Message[]
+  workflowAgents    WorkflowAgent[]
+  agentRatings      AgentRating[]
+  agentExecutions   AgentExecution[]
+
+  @@map("agents")
+}
+
+model Workflow {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  description String?
+  category    String?
+  isActive    Boolean  @default(true)
+  isPublic    Boolean  @default(false)
+  estimatedDuration Int? // Duration in seconds
+  config      Json?    // Workflow configuration
+  metadata    Json?    // Additional metadata
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  userId      String?  // Make optional for system workflows
+  
+  user           User?            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  workflowAgents WorkflowAgent[]
+  chatSessions   ChatSession[]
+  executions     WorkflowExecution[]
+
+  @@map("workflows")
+}
+
+model WorkflowAgent {
+  id         String @id @default(cuid())
+  workflowId String
+  agentId    String
+  order      Int
+  role       String? // primary, specialist, supporting, etc.
+  config     Json?  // Agent-specific config in workflow
+  
+  workflow Workflow @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+  agent    Agent    @relation(fields: [agentId], references: [id], onDelete: Cascade)
+
+  @@unique([workflowId, agentId])
+  @@map("workflow_agents")
+}
+
+model WorkflowExecution {
+  id         String              @id @default(cuid())
+  workflowId String
+  status     WorkflowStatus      @default(RUNNING)
+  startedAt  DateTime           @default(now())
+  completedAt DateTime?
+  result     Json?
+  error      String?
+  
+  workflow Workflow @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+  steps    ExecutionStep[]
+
+  @@map("workflow_executions")
+}
+
+model ExecutionStep {
+  id          String    @id @default(cuid())
+  executionId String
+  agentId     String
+  order       Int
+  status      StepStatus @default(PENDING)
+  input       Json?
+  output      Json?
+  startedAt   DateTime?
+  completedAt DateTime?
+  error       String?
+  
+  execution WorkflowExecution @relation(fields: [executionId], references: [id], onDelete: Cascade)
+
+  @@map("execution_steps")
+}
+
+model AgentExecution {
+  id        String   @id @default(cuid())
+  agentId   String
+  input     Json
+  output    Json?
+  status    String
+  startedAt DateTime @default(now())
+  completedAt DateTime?
+  duration  Int?     // milliseconds
+  tokens    Int?
+  cost      Float?
+  error     String?
+  
+  agent Agent @relation(fields: [agentId], references: [id], onDelete: Cascade)
+
+  @@map("agent_executions")
+}
+
+// Usage & Billing
+model UsageRecord {
+  id        String   @id @default(cuid())
+  userId    String
+  model     String
+  tokens    Int
+  cost      Float
+  type      String   // chat, agent, workflow
+  createdAt DateTime @default(now())
+  
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("usage_records")
+}
+
+model ApiKey {
+  id        String   @id @default(cuid())
+  name      String
+  key       String   @unique
+  userId    String
+  isActive  Boolean  @default(true)
+  lastUsed  DateTime?
+  createdAt DateTime @default(now())
+  
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("api_keys")
+}
+
+// Marketplace
+model AgentRating {
+  id       String @id @default(cuid())
+  agentId  String
+  userId   String
+  rating   Int    // 1-5
+  review   String?
+  createdAt DateTime @default(now())
+  
+  agent Agent @relation(fields: [agentId], references: [id], onDelete: Cascade)
+
+  @@unique([agentId, userId])
+  @@map("agent_ratings")
+}
+
+// Enums
+enum SubscriptionStatus {
+  FREE
+  BASIC
+  PRO
+  ENTERPRISE
+}
+
+enum AgentType {
+  SPECIALIST
+  UTILITY
+  ORCHESTRATOR
+}
+
+enum WorkflowStatus {
+  PENDING
+  RUNNING
+  COMPLETED
+  FAILED
+  CANCELLED
+}
+
+enum StepStatus {
+  PENDING
+  RUNNING
+  COMPLETED
+  FAILED
+  SKIPPED
+}

@@ -35,7 +35,7 @@ export interface ModelParams {
  */
 export interface LLMProvider {
   generateResponse(messages: Message[], params?: ModelParams): Promise<string>;
-  streamResponse(messages: Message[], params?: ModelParams): AsyncGenerator<string>;
+  generateStreamingResponse?(messages: Message[], params?: ModelParams): AsyncGenerator<string>;
 }
 
 /**

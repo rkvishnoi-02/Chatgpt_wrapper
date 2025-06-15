@@ -1,5 +1,5 @@
 /**
- * Local storage utilities with type safety
+ * Local storage utilities with type safety and user-specific storage
  */
 
 import { ChatSession } from '@/types/session';
@@ -8,35 +8,93 @@ const STORAGE_PREFIX = 'llm-wrapper-';
 const SESSION_PREFIX = 'chat-session-';
 const SESSION_INDEX_KEY = 'chat-sessions';
 
-export function setStorageItem<T>(key: string, value: T): void {
+// Get current user ID from a global variable set by the chat store or return anonymous
+export function getCurrentUserId(): string {
+  if (typeof window === 'undefined') return 'anonymous';
+  
+  try {
+    // Check if user ID was set by the chat store
+    const storedUserId = (window as any).__CURRENT_USER_ID;
+    if (storedUserId) {
+      return storedUserId;
+    }
+    
+    // Fallback to checking session storage for NextAuth tokens
+    const authSession = sessionStorage.getItem('next-auth.session-token') || localStorage.getItem('next-auth.session-token');
+    if (authSession) {
+      // For demo, use a simple hash of session to create user-specific storage
+      const userHash = btoa(authSession).slice(0, 8);
+      return `user-${userHash}`;
+    }
+  } catch (error) {
+    console.log('No auth session found, using anonymous storage');
+  }
+  
+  return 'anonymous';
+}
+
+// Set the current user ID for storage operations
+export function setCurrentUserId(userId: string | null): void {
+  if (typeof window !== 'undefined') {
+    (window as any).__CURRENT_USER_ID = userId || 'anonymous';
+  }
+}
+
+function getUserStorageKey(key: string, userId?: string): string {
+  const currentUserId = userId || getCurrentUserId();
+  return `${STORAGE_PREFIX}${currentUserId}-${key}`;
+}
+
+export function setStorageItem<T>(key: string, value: T, userId?: string): void {
+  if (typeof window === 'undefined') return;
   try {
     const serializedValue = JSON.stringify(value);
-    localStorage.setItem(`${STORAGE_PREFIX}${key}`, serializedValue);
+    const storageKey = getUserStorageKey(key, userId);
+    localStorage.setItem(storageKey, serializedValue);
   } catch (error) {
     console.error(`Error saving to localStorage:`, error);
   }
 }
 
-export function getStorageItem<T>(key: string, defaultValue: T): T {
+export function getStorageItem<T>(key: string, defaultValue: T, userId?: string): T {
+  if (typeof window === 'undefined') return defaultValue;
   try {
-    const item = localStorage.getItem(`${STORAGE_PREFIX}${key}`);
+    const storageKey = getUserStorageKey(key, userId);
+    const item = localStorage.getItem(storageKey);
     if (!item) return defaultValue;
     return JSON.parse(item) as T;
   } catch (error) {
-    console.error(`Error reading from localStorage:`, error);
+    console.error(`Error getting storage item:`, error);
     return defaultValue;
   }
 }
 
-export function removeStorageItem(key: string): void {
+export function removeStorageItem(key: string, userId?: string): void {
+  if (typeof window === 'undefined') return;
   try {
-    localStorage.removeItem(`${STORAGE_PREFIX}${key}`);
+    const storageKey = getUserStorageKey(key, userId);
+    localStorage.removeItem(storageKey);
   } catch (error) {
     console.error(`Error removing from localStorage:`, error);
   }
 }
 
+export function clearUserStorage(userId?: string): void {
+  if (typeof window === 'undefined') return;
+  try {
+    const currentUserId = userId || getCurrentUserId();
+    const userPrefix = `${STORAGE_PREFIX}${currentUserId}-`;
+    
+    Object.keys(localStorage)
+      .filter(key => key.startsWith(userPrefix))
+      .forEach(key => localStorage.removeItem(key));
+  } catch (error) {
+    console.error(`Error clearing user localStorage:`, error);
+  }
+}
+
 export function clearStorage(): void {
+  if (typeof window === 'undefined') return;
   try {
     Object.keys(localStorage)
       .filter(key => key.startsWith(STORAGE_PREFIX))
@@ -141,6 +199,7 @@ export function migrateLocalStorage(): void {
 }
 
 export function cleanupStorage(): void {
+  if (typeof window === 'undefined') return;
   try {
     // Remove any expired or invalid items
     const now = Date.now();

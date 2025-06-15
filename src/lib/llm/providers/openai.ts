@@ -45,8 +45,7 @@ export class OpenAIProvider implements LLMProvider {
       throw error;
     }
   }
-
-  async *streamResponse(messages: Message[], params?: ModelParams): AsyncGenerator<string> {
+  async *generateStreamingResponse(messages: Message[], params?: ModelParams): AsyncGenerator<string> {
     try {
       const response = await axios.post(
         this.baseUrl,
